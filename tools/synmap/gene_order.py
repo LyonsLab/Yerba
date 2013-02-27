@@ -11,9 +11,6 @@ import sys
 
 logger = logging.getLogger("gene_order")
 logger.setLevel(logging.INFO)
-fhandler = FileHandler("/home/erbriones/gene_order.log")
-fhandler.setLevel(logging.DEBUG)
-logger.addHandler(fhandler)
 
 def main(input, output, gid1, gid2, feature1, feature2):
     ''' Returns a dag file
