@@ -6,7 +6,6 @@ import logging
 import gzip
 import os
 import re
-import shutil
 import sys
 
 logger = logging.getLogger("gene_order")
@@ -24,9 +23,7 @@ def main(input, output, gid1, gid2, feature1, feature2):
         logging.error("Input file: (%s) not found.", input)
 
     if not(feature1 == "genomic") and not(feature2 == "genomic"):
-        logging.warn("No genomic features were specified.")
-        shutil.copyfile(input, output)
-        return 0
+        logging.info("No genomic features were specified.")
     else:
         #FIXME: Is this for a future addition?
         # This was brought over from the perl script.
@@ -52,14 +49,13 @@ def main(input, output, gid1, gid2, feature1, feature2):
     genomic_order = order_genes(input_file, feature1, feature2)
     logging.info("Writing %s for converting to gene order.", args.output)
 
-    with open(output) as fp:
+    with open(output, "w") as fp:
         for line in input_file:
             if line.startswith("#"):
                 fp.write("%s\n" % line)
                 continue
             
-            fields = line.split("\t")
-            fields.append("\n")
+            fields = line.rstrip("\n\r").split("\t")
 
             if feature1 == "genomic":
                 fields[2] = genomic_order[1][fields[0]][fields[1]]['order']
@@ -76,11 +72,12 @@ def main(input, output, gid1, gid2, feature1, feature2):
                 item = re.split("\|\|", fields[5])[7]
                 fields[6] = item
                 fields[7] = item
-            
-            fp.write("\t".join(fields))
+           
+            output = reduce(lambda x, y: "\t".join([str(x),str(y)]), fields)
+            fp.write("%s\n" % output)
     return 0 
 
-def order_genes(data, feature1, feature2):
+def order_genes(input_file, feature1, feature2):
     '''Returns dictionary containing the genomic sequence
    
     The order of the genes in a genome are changed if the feature is genomic.
@@ -88,21 +85,27 @@ def order_genes(data, feature1, feature2):
     sequence.
     '''
 
-    genomic_order = {}
+    genomic_order = {1 : {}, 2 : {}}
 
     for line in input_file:
         if line.startswith("#"):
             continue
 
-        fields = line.split("/t")
+        field = line.rstrip("\n\r").split("\t")
         # FIXME: What was this intended to do? It's from the perl script
         #items = map(lambda x: re.split('\|\|', x), [fields[1], fields[5]])
 
         if feature1 == "genomic":
-            genomic_order[1] = {field[0] : {field[1] : {'start' : field[2]}}}
+            if not field[0] in genomic_order[1]:
+                genomic_order[1][field[0]] = {field[1] : {'start' : field[2]}}
+            else:
+                genomic_order[1][field[0]][field[1]] = {'start' : field[2]}
 
-        if feature2 == "genomic": 
-            genomic_order[2] = {field[4] : {field[5] : {'start' : field[6]}}}
+        if feature2 == "genomic":
+            if not field[4] in genomic_order[1]:
+                genomic_order[2][field[4]] = {field[5] : {'start' : field[6]}}
+            else:
+                genomic_order[2][field[4]][field[5]]  = {'start' : field[6]}
 
     # Compares the gene by its starting position
     cmp_by_start_seq = lambda x : x['start']
@@ -113,7 +116,7 @@ def order_genes(data, feature1, feature2):
             sorted(genes, key=cmp_by_start_seq)
             
             for (order, gene) in enumerate(genes, start=1):
-                gene[order] = order
+                gene['order'] = order
 
     if feature2 == "genomic":
         for chromosome in genomic_order[2].iterkeys():
@@ -145,7 +148,7 @@ if __name__ == "__main__":
                         help="The feature of the second genome")
     args = parser.parse_args()
 
-    ret = main(args.input, args.output, args.gid1, argsgid2, args.feature1,
+    ret = main(args.input, args.output, args.gid1, args.gid2, args.feature1,
          args.feature2)
 
     sys.exit(ret)
