@@ -17,7 +17,7 @@ def main(input, output, gid1, gid2, feature1, feature2):
     If feature1 or feature2 are genomic then the dag will be reordered and
     generate a new file. Otherwise, the input dag file will be copied. 
     '''
-    genomic_flag = 0
+    genomic = False
 
     if not(os.path.exists(input)):
         logging.error("Input file: (%s) not found.", input)
@@ -28,7 +28,7 @@ def main(input, output, gid1, gid2, feature1, feature2):
         #FIXME: Is this for a future addition?
         # This was brought over from the perl script.
         # Genomic names need to be processed seperately 
-        genomic_flag = 1
+        genomic = True
 
     logging.info("Opening %s for converting to gene order.", input)
 
@@ -46,8 +46,10 @@ def main(input, output, gid1, gid2, feature1, feature2):
         logging.error("The input file was unable to be opened.")
         return 1
 
-    genomic_order = order_genes(input_file, feature1, feature2)
-    logging.info("Writing %s for converting to gene order.", args.output)
+    if genomic:
+        genomic_order = order_genes(input_file, feature1, feature2)
+    
+    logging.info("Writing %s in gene order.", args.output)
 
     with open(output, "w") as fp:
         for line in input_file:
@@ -78,7 +80,7 @@ def main(input, output, gid1, gid2, feature1, feature2):
     return 0 
 
 def order_genes(input_file, feature1, feature2):
-    '''Returns dictionary containing the genomic sequence
+    '''Returns dictionary containing the genomic order
    
     The order of the genes in a genome are changed if the feature is genomic.
     The ordering of the genes is done by using the start position of its
