@@ -14,9 +14,9 @@ logger.setLevel(logging.INFO)
 def main(input, output, gid1, gid2, feature1, feature2):
     ''' Returns a dag file
 
-    If feature1 or feature2 are genomic then the dag will be reordered and
-    generate a new file. Otherwise, the input dag file will be copied.
-    '''
+    If feature1 or feature2 are genomic then the genomic hits need to be
+    reordered differently. Otherwise the positions will be set from the
+    data within the file.'''
     genomic = False
 
     if not(os.path.exists(input)):
@@ -75,7 +75,7 @@ def main(input, output, gid1, gid2, feature1, feature2):
                 fields[6] = genomic_order[2][fields[4]][fields[5]]['order']
                 fields[7] = genomic_order[2][fields[4]][fields[5]]['order']
             else:
-                item = re.split("\|\|", fields[5])[7]
+                item = re.split("\|\|", fields[5])
 
                 if not isinstance(item, list) or len(item) < 8:
                     msg = ("The line could not be split for feature (%s)"
@@ -130,7 +130,7 @@ def order_genes(input_file, feature1, feature2):
                 genomic_order[2][field[4]][field[5]]  = {'start' : field[6]}
 
     # Compares the gene by its starting position
-    cmp_by_start_seq = lambda x : x['start']
+    cmp_by_start_seq = lambda x : int(x['start'])
 
     if feature1 == "genomic":
         for chromosome in genomic_order[1].iterkeys():
@@ -139,6 +139,7 @@ def order_genes(input_file, feature1, feature2):
 
             for (order, gene) in enumerate(genes, start=1):
                 gene['order'] = order
+                logging.debug(gene)
 
     if feature2 == "genomic":
         for chromosome in genomic_order[2].iterkeys():
@@ -147,6 +148,7 @@ def order_genes(input_file, feature1, feature2):
 
             for (order, gene) in enumerate(genes, start=1):
                 gene['order'] = order
+                logging.debug(gene)
 
     return genomic_order
 
