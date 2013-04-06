@@ -124,7 +124,7 @@ def order_genes(input_file, feature1, feature2):
                 genomic_order[1][field[0]][field[1]] = {'start' : field[2]}
 
         if feature2 == "genomic":
-            if not field[4] in genomic_order[1]:
+            if not field[4] in genomic_order[2]:
                 genomic_order[2][field[4]] = {field[5] : {'start' : field[6]}}
             else:
                 genomic_order[2][field[4]][field[5]]  = {'start' : field[6]}
