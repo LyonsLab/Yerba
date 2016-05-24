@@ -103,7 +103,7 @@ def report_state():
     "--The total time sending data to workers is {}\n"
     "--The total time spent recieving data from the workers is {}\n"
     "--The total number of MB sent is {}\n"
-    "--The total number of MB recieved is {}\n"
+    "--The total number of MB received is {}\n"
     "--The total number of workers joined {}\n"
     "--The total number of workers removed is {}\n"
     "--The total number of tasks completed is {}\n"

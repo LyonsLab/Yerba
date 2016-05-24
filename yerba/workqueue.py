@@ -162,7 +162,7 @@ class WorkQueueService(Service):
 
         try:
             logger.debug("INSPECTING TASK: %s", str(task))
-            logger.debug(('WORKQUEUE %s: Recieved task %s from work_queue with'
+            logger.debug(('WORKQUEUE %s: Received task %s from work_queue with'
                 ' return_status %s'), self.project, task.id, task.return_status)
         except:
             logger.debug("Couldn't inspect the task")

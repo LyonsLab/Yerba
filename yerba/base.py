@@ -50,12 +50,12 @@ def listen_forever(config):
                 try:
                     data = socket.recv_string()
                     msg = decoder.decode(data)
-                    access.debug("ZMQ: Recieved \n%s", pformat(msg))
+                    access.debug("ZMQ: Received \n%s", pformat(msg))
                 except Exception:
                     logger.exception("ZMQ: The message was not parsed")
 
                 if not msg:
-                    logger.warn("The message was not recieved.")
+                    logger.warn("The message was not received.")
                 else:
                     try:
                         response = dispatch(msg)
