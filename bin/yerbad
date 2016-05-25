@@ -68,7 +68,7 @@ def main(args=None):
     cfg = RawConfigParser(DEFAULTS)
 
     try:
-        CONFIG_PATHS.append(args['config'])
+        CONFIG_PATHS = [ args['config'] ] #CONFIG_PATHS.append(args['config']) # mdb changed 5/24/16 -- override default configs when specified in command-line
     except KeyError:
         pass
     finally:
