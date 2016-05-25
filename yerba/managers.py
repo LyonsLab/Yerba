@@ -201,7 +201,7 @@ class WorkflowManager(object):
             logger.exception("the workflow failed to be generated")
             return (None, Status.Error, e.errors)
         except Exception as e:
-            logger.exception("""an unexpected error occured during
+            logger.exception("""an unexpected error occurred during
                             workflow generation""")
             return (None, Status.Error, None)
 
@@ -333,7 +333,7 @@ class WorkflowManager(object):
             logger.exception("the workflow failed to be generated")
             return Status.Error
         except Exception as e:
-            logger.exception("""an unexpected error occured during
+            logger.exception("""an unexpected error occurred during
                             workflow generation""")
             return Status.Error
 
