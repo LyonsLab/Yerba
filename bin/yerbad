@@ -12,7 +12,7 @@ SCRIPT_PATH = os.path.dirname(__file__)
 sys.path.insert(0, os.path.abspath(os.path.join(SCRIPT_PATH, '..')))
 sys.path.insert(0, "/usr/local/lib/python2.7/site-packages")
 
-from yerba.base import listen_forever
+from yerba.base import listen_forever, shutdown
 from yerba.db import setup
 
 DEFAULTS = {
@@ -59,7 +59,7 @@ def setup_logger(cfg, name):
 
 def signal_handler(signal, frame):
     print('!!!! Captured Ctrl+C, exiting gracefully ...')
-    sys.exit(0);
+    shutdown()
 
 def main(args=None):
     # Setup signal handler
@@ -88,6 +88,7 @@ def main(args=None):
         sys.exit(0)
 
     listen_forever(cfg)
+    print("Exiting ...")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
