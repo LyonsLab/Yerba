@@ -49,19 +49,19 @@ class EventNotifier(object):
 
     def notify(self, event, *args, **kw):
         '''
-        Notify all registered recievers for the event
+        Notify all registered receivers for the event
         '''
         for callback in self.events[event]:
             callback(*args, **kw)
 
-    def register(self, event, reciever):
+    def register(self, event, receiver):
         '''
-        Register the reciever to be notified for the event
+        Register the receiver to be notified for the event
         '''
-        self.events[event].append(reciever)
+        self.events[event].append(receiver)
 
     def unregister(self, event, receiver):
         '''
-        Unregister the reciever from event
+        Unregister the receiver from event
         '''
         self.events[event].remove(receiver)
