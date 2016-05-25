@@ -66,12 +66,10 @@ class WorkQueueService(Service):
         '''
         try:
             self.queue = wq.WorkQueue(name=self.project, catalog=True, port=-1)
-            self.queue.specify_catalog_server(self.catalog_server,
-                    self.catalog_port)
+            self.queue.specify_catalog_server(self.catalog_server, self.catalog_port)
             self.queue.specify_log(self.log)
 
-            logger.info('WORKQUEUE %s: Starting work queue on port %s',
-                    self.project, self.queue.port)
+            logger.info('WORKQUEUE %s: Starting work queue on port %s', self.project, self.queue.port)
         except Exception:
             logger.exception("The work queue could not be started")
             exit(1)
@@ -80,8 +78,7 @@ class WorkQueueService(Service):
         '''
         Removes all jobs from the queue and stops the work queue.
         '''
-        logger.info('WORKQUEUE %s: Stopping work queue on port %s',
-                self.project, self.queue.port)
+        logger.info('WORKQUEUE %s: Stopping work queue on port %s', self.project, self.queue.port)
         self.queue.shutdown_workers(0)
 
     def schedule(self, iterable, name, priority=None):
@@ -104,8 +101,7 @@ class WorkQueueService(Service):
                     if name not in names:
                         names.append(name)
 
-                    logger.info(('WORKQUEUE %s: This job has already been'
-                        'assigned to task %s'), self.project, taskid)
+                    logger.info(('WORKQUEUE %s: This job has already been assigned to task %s'), self.project, taskid)
 
                     self.tasks[taskid] = (names, job)
                     skip = True
@@ -120,22 +116,18 @@ class WorkQueueService(Service):
             for input_file in new_job.inputs:
                 if isinstance(input_file, list) and input_file[1]:
                     remote_input = basename(abspath(input_file[0]))
-                    task.specify_directory(str(input_file[0]), str(remote_input),
-                                    wq.WORK_QUEUE_INPUT, recursive=1)
+                    task.specify_directory(str(input_file[0]), str(remote_input), wq.WORK_QUEUE_INPUT, recursive=1)
                 else:
                     remote_input = basename(abspath(input_file))
-                    task.specify_input_file(str(input_file), str(remote_input),
-                                    wq.WORK_QUEUE_INPUT)
+                    task.specify_input_file(str(input_file), str(remote_input), wq.WORK_QUEUE_INPUT)
 
             for output_file in new_job.outputs:
                 if isinstance(output_file, list):
                     remote_output = basename(abspath(output_file[0]))
-                    task.specify_directory(str(output_file[0]), str(remote_output),
-                                    wq.WORK_QUEUE_OUTPUT, recursive=1, cache=False)
+                    task.specify_directory(str(output_file[0]), str(remote_output), wq.WORK_QUEUE_OUTPUT, recursive=1, cache=False)
                 else:
                     remote_output = basename(abspath(output_file))
-                    task.specify_file(str(output_file), str(remote_output),
-                                    wq.WORK_QUEUE_OUTPUT, cache=False)
+                    task.specify_file(str(output_file), str(remote_output), wq.WORK_QUEUE_OUTPUT, cache=False)
 
             new_id = self.queue.submit(task)
 
@@ -157,19 +149,16 @@ class WorkQueueService(Service):
             return
 
         logger.info("######### WORKQUEUE UPDATING ##########")
-        logger.info("WORKQUEUE %s: Fetching task from the work queue",
-                self.project)
+        logger.info("WORKQUEUE %s: Fetching task from the work queue", self.project)
 
         try:
             logger.debug("INSPECTING TASK: %s", str(task))
-            logger.debug(('WORKQUEUE %s: Received task %s from work_queue with'
-                ' return_status %s'), self.project, task.id, task.return_status)
+            logger.debug(('WORKQUEUE %s: Received task %s from work_queue with return_status %s'), self.project, task.id, task.return_status)
         except:
             logger.debug("Couldn't inspect the task")
 
         if task.id not in self.tasks:
-            logger.info(('WORKQUEUE %s: The job for id %s could ',
-                'not be found.'), self.project, task.id)
+            logger.info(('WORKQUEUE %s: The job for id %s could not be found.'), self.project, task.id)
             return
 
         (names, job) = self.tasks[task.id]
@@ -188,8 +177,7 @@ class WorkQueueService(Service):
         for (taskid, item) in self.tasks.items():
             (names, job) = item
 
-            logger.info('WORKFLOW %s: Requesting task %s to be cancelled',
-                    name, taskid)
+            logger.info('WORKFLOW %s: Requesting task %s to be cancelled', name, taskid)
 
             if name in names:
                 names.remove(name)
@@ -201,14 +189,11 @@ class WorkQueueService(Service):
 
                 if task:
                     del self.tasks[taskid]
-                    logger.info("WORKQUEUE %s: The task %s was cancelled",
-                        self.project, task.taskid)
+                    logger.info("WORKQUEUE %s: The task %s was cancelled", self.project, task.taskid)
                 else:
-                    logger.error("WORKQUEUE %s: failed to cancel %s",
-                        self.project, taskid)
+                    logger.error("WORKQUEUE %s: failed to cancel %s", self.project, taskid)
             else:
-                msg = ('WORKQUEUE %s: The task %s was not cancelled '
-                        'workflows %s depend on the task')
+                msg = ('WORKQUEUE %s: The task %s was not cancelled, workflows %s depend on the task')
                 logger.info(msg, self.project, taskid, ', '.join(names))
                 self.tasks[taskid] = (names, job)
 
