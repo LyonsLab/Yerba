@@ -34,7 +34,7 @@ class ServiceManager(object):
         key = '.'.join((service.group, service.name))
 
         if key in cls.core:
-            logger.warn("This service already exists.")
+            logger.warn("Service '%s' already exists.", key)
         else:
             cls.core[key] = service
 
@@ -201,8 +201,7 @@ class WorkflowManager(object):
             logger.exception("the workflow failed to be generated")
             return (None, Status.Error, e.errors)
         except Exception as e:
-            logger.exception("""an unexpected error occurred during
-                            workflow generation""")
+            logger.exception("""an unexpected error occurred during workflow generation""")
             return (None, Status.Error, None)
 
         # Check if the id was given otherwise try to find the workflow
@@ -226,9 +225,7 @@ class WorkflowManager(object):
                     name=workflow.name, log=workflow.log, jobs=data['jobs'],
                     priority=workflow.priority)
         else:
-
-            (workflow_id, _) = cls.create(workflow=workflow,
-                                          jobs_object=data['jobs'])
+            (workflow_id, _) = cls.create(workflow=workflow, jobs_object=data['jobs'])
 
         cls.workflows[workflow_id] = workflow
         scheduled_status = cls.schedule(workflow_id, workflow)
@@ -244,8 +241,7 @@ class WorkflowManager(object):
 
         #: Submit any jobs to the queue
         if jobs:
-            cls.notifier.notify(SCHEDULE_TASK, jobs, workflow_id,
-                                priority=workflow.priority)
+            cls.notifier.notify(SCHEDULE_TASK, jobs, workflow_id, priority=workflow.priority)
             logger.info("submitted workflow id=%s", workflow_id)
 
         return workflow.status
@@ -268,16 +264,13 @@ class WorkflowManager(object):
             #: Fetch next set of tasks and update the worflow
             iterable = workflow.next()
 
-            logger.info("updating workflow id=%s status=%s",
-                        workflow.name, status_name(workflow.status))
+            logger.info("updating workflow id=%s status=%s", workflow.name, status_name(workflow.status))
 
             #: Save the status to the store and submit tasks
             if workflow.status != Status.Running:
-                cls.store.update_status(workflow_id, workflow.status,
-                                 completed=True)
+                cls.store.update_status(workflow_id, workflow.status, completed=True)
             else:
-                cls.notifier.notify(SCHEDULE_TASK, iterable, workflow_id,
-                                    priority=workflow.priority)
+                cls.notifier.notify(SCHEDULE_TASK, iterable, workflow_id, priority=workflow.priority)
                 cls.store.update_status(workflow_id, workflow.status)
 
     @classmethod
@@ -299,8 +292,7 @@ class WorkflowManager(object):
 
         with ignored(KeyError):
             workflow = cls.workflows[int(workflow_id)]
-            logger.info(('WORKQUEUE %s: the workflow has been requested'
-            'to be cancelled'), workflow.name)
+            logger.info(('WORKQUEUE %s: the workflow has been requested to be cancelled'), workflow.name)
 
             workflow.cancel()
             status = workflow.status
@@ -333,8 +325,7 @@ class WorkflowManager(object):
             logger.exception("the workflow failed to be generated")
             return Status.Error
         except Exception as e:
-            logger.exception("""an unexpected error occurred during
-                            workflow generation""")
+            logger.exception("""an unexpected error occurred during workflow generation""")
             return Status.Error
 
         cls.workflows[wid] = workflow
@@ -344,6 +335,6 @@ class WorkflowManager(object):
     @classmethod
     def cleanup(cls):
         """
-        Go through all Running jobs and set there status to stopped.
+        Set status for all Running jobs to stopped.
         """
         cls.store.stop_workflows()
