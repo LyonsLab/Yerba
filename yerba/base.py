@@ -20,18 +20,29 @@ decoder = json.JSONDecoder()
 
 def listen_forever(config):
     notifier = EventNotifier()
-    wq = WorkQueueService(dict(config.items('workqueue')), notifier)
-    ServiceManager.register(wq)
-    ServiceManager.start()
+    
+    for i in range(10): #FIXME hardcoded 10 max work queues
+        try:
+            wqconfig = config.items('workqueue' + (str(i) if i else '')) # workqueue, workqueue1, workqueue2...
+        except:
+            continue
+        
+        # Create WQ service
+        wq = WorkQueueService(dict(wqconfig), notifier)
+        ServiceManager.register(wq)
+        notifier.register(CANCEL_TASK, wq.cancel)
+        notifier.register(SCHEDULE_TASK, wq.schedule)
+    
+    # Create WQ manager
     WorkflowManager.connect(config.get('db', 'path'))
     WorkflowManager.set_notifier(notifier)
     WorkflowManager.cleanup()
-
-    #: Register for events to be notified by
     notifier.register(TASK_DONE, WorkflowManager.update)
-    notifier.register(CANCEL_TASK, wq.cancel)
-    notifier.register(SCHEDULE_TASK, wq.schedule)
+    
+    # Start WQ services
+    ServiceManager.start()
 
+    # Setup socket
     connection_string = "tcp://*:{}".format(config.get('yerba', 'port'))
     context = zmq.Context()
     socket = context.socket(zmq.REP)
@@ -41,6 +52,7 @@ def listen_forever(config):
     poller.register(socket, zmq.POLLIN)
     atexit.register(shutdown)
 
+    # Main loop
     while running:
         try:
             if socket in dict(poller.poll(timeout=10)):
@@ -76,8 +88,7 @@ def listen_forever(config):
                     access.info("Sending Response")
                     socket.send_unicode(message, flags=zmq.NOBLOCK)
                 except zmq.Again:
-                    logger.exception("Failed to respond with response %s",
-                        response)
+                    logger.exception("Failed to respond with response %s", response)
                 finally:
                     access.info("Finished processing the response")
             else:
@@ -134,7 +145,6 @@ def restart_workflow(data):
         return {"status" : status_name(status)}
     except KeyError:
         return {"status" : 'NotFound'}
-
 
 @route("cancel")
 def cancel_workflow(data):

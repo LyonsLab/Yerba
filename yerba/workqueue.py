@@ -6,7 +6,7 @@ from logging import getLogger
 from os.path import abspath, basename
 from sys import exit
 
-import work_queue as wq
+import work_queue as WQ
 
 from yerba.core import TASK_DONE
 from yerba.services import Service
@@ -15,7 +15,7 @@ logger = getLogger('yerba.workqueue')
 name = "yerba"
 MAX_OUTPUT = 65536
 
-def get_task_info(task):
+def get_task_info(task): # mdb: move into core.py?
     dateformat="%d/%m/%y at %I:%M:%S%p"
     DIV = 1000000.0
 
@@ -50,13 +50,17 @@ class WorkQueueService(Service):
             self.catalog_port = int(config['catalog_port'])
             self.port = int(config['port'])
             self.log = config['log']
+            self.password = config['password'] # mdb added 5/25/16
+            
+            # mdb added 5/25/16 for distribution
+            self.name += '.' + self.project;
 
             if config['debug']:
-                wq.set_debug_flag('all')
+                WQ.set_debug_flag('all')
         except KeyError:
             logger.exception("Invalid workqueue configuration")
             exit(1)
-
+            
     def initialize(self):
         '''
         Initializes work_queue for scheduling workers.
@@ -65,11 +69,11 @@ class WorkQueueService(Service):
         on the port. If an existing queue is running then the process will exit.
         '''
         try:
-            self.queue = wq.WorkQueue(name=self.project, catalog=True, port=-1)
+            self.queue = WQ.WorkQueue(name=self.project, catalog=True, port=-1)
             self.queue.specify_catalog_server(self.catalog_server, self.catalog_port)
             self.queue.specify_log(self.log)
-
-            logger.info('WORKQUEUE %s: Starting work queue on port %s', self.project, self.queue.port)
+            self.queue.specify_password_file(self.password) # mdb added 5/25/16
+            logger.info('WORKQUEUE %s: Started work queue on port %s', self.project, self.queue.port)
         except Exception:
             logger.exception("The work queue could not be started")
             exit(1)
@@ -111,23 +115,23 @@ class WorkQueueService(Service):
                 continue
 
             cmd = str(new_job)
-            task = wq.Task(cmd)
+            task = WQ.Task(cmd)
 
             for input_file in new_job.inputs:
                 if isinstance(input_file, list) and input_file[1]:
                     remote_input = basename(abspath(input_file[0]))
-                    task.specify_directory(str(input_file[0]), str(remote_input), wq.WORK_QUEUE_INPUT, recursive=1)
+                    task.specify_directory(str(input_file[0]), str(remote_input), WQ.WORK_QUEUE_INPUT, recursive=1)
                 else:
                     remote_input = basename(abspath(input_file))
-                    task.specify_input_file(str(input_file), str(remote_input), wq.WORK_QUEUE_INPUT)
+                    task.specify_input_file(str(input_file), str(remote_input), WQ.WORK_QUEUE_INPUT)
 
             for output_file in new_job.outputs:
                 if isinstance(output_file, list):
                     remote_output = basename(abspath(output_file[0]))
-                    task.specify_directory(str(output_file[0]), str(remote_output), wq.WORK_QUEUE_OUTPUT, recursive=1, cache=False)
+                    task.specify_directory(str(output_file[0]), str(remote_output), WQ.WORK_QUEUE_OUTPUT, recursive=1, cache=False)
                 else:
                     remote_output = basename(abspath(output_file))
-                    task.specify_file(str(output_file), str(remote_output), wq.WORK_QUEUE_OUTPUT, cache=False)
+                    task.specify_file(str(output_file), str(remote_output), WQ.WORK_QUEUE_OUTPUT, cache=False)
 
             new_id = self.queue.submit(task)
 
