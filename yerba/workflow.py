@@ -440,9 +440,8 @@ class Workflow(object):
         with utils.ignored(OSError, AttributeError):
             os.makedirs(os.path.dirname(logfile))
 
-        errors = []
-
         # Verify jobs and save errors
+        errors = []
         for (index, job_object) in enumerate(job_objects):
             (valid, reason) = validate_job(job_object)
 
