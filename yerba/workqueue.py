@@ -49,8 +49,9 @@ class WorkQueueService(Service):
             self.catalog_server = config['catalog_server']
             self.catalog_port = int(config['catalog_port'])
             self.port = int(config['port'])
+            self.priority = int(config['priority']) # mdb added 5/26/16
             self.log = config['log']
-            self.password = config['password'] # mdb added 5/25/16
+            #self.password = config['password'] # mdb added 5/25/16
             
             # mdb added 5/25/16 for distribution
             self.name += '.' + self.project;
@@ -72,7 +73,7 @@ class WorkQueueService(Service):
             self.queue = WQ.WorkQueue(name=self.project, catalog=True, port=-1)
             self.queue.specify_catalog_server(self.catalog_server, self.catalog_port)
             self.queue.specify_log(self.log)
-            self.queue.specify_password_file(self.password) # mdb added 5/25/16
+            #self.queue.specify_password_file(self.password) # mdb added 5/25/16
             logger.info('WORKQUEUE %s: Started work queue on port %s', self.project, self.queue.port)
         except Exception:
             logger.exception("The work queue could not be started")
@@ -89,6 +90,10 @@ class WorkQueueService(Service):
         '''
         Schedules jobs into work_queue
         '''
+        
+        if self.priority != priority: # mdb added 5/26/16
+            return;
+        
         logger.info("######### WORKQUEUE SCHEDULING ##########")
         for new_job in iterable:
             logger.info('WORKQUEUE %s: The workflow %s is scheduling job %s', self.project, name, new_job)
