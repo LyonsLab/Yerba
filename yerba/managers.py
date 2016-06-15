@@ -101,7 +101,7 @@ def report_state():
     "---- Work Queue Info --\n"
     "--The work queue started on {}\n"
     "--The total time sending data to workers is {}\n"
-    "--The total time spent recieving data from the workers is {}\n"
+    "--The total time spent receiving data from the workers is {}\n"
     "--The total number of MB sent is {}\n"
     "--The total number of MB received is {}\n"
     "--The total number of workers joined {}\n"
