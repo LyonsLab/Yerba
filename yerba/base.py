@@ -18,10 +18,12 @@ access = logging.getLogger('access')
 running = True
 decoder = json.JSONDecoder()
 
+MAX_WORK_QUEUES = 10
+
 def listen_forever(config):
     notifier = EventNotifier()
     
-    for i in range(10): #FIXME hardcoded 10 max work queues
+    for i in range(MAX_WORK_QUEUES):
         try:
             wqconfig = config.items('workqueue' + (str(i) if i else '')) # workqueue, workqueue1, workqueue2...
         except:
@@ -95,7 +97,7 @@ def listen_forever(config):
                 try:
                     ServiceManager.update()
                 except:
-                    logger.exception("WORKQUEUE: Update error occured")
+                    logger.exception("WORKQUEUE: Update error occurred")
         except:
             logger.exception("EXPERIENCED AN ERROR!")
 
