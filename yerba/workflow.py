@@ -144,8 +144,7 @@ class Job(object):
         new_job.outputs.extend(sorted(outputs))
 
         if 'overwrite' in job_object and int(job_object['overwrite']):
-            logger.debug(("The job will overwrite previous"
-                "results:\n%s"), new_job)
+            logger.debug(("The job will overwrite previous results:\n%s"), new_job)
             new_job.clear()
 
         return new_job
