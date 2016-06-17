@@ -10,7 +10,7 @@ import zmq
 
 _path = os.path.dirname(__file__)
 _defaults = {
-    'connection' : 'tcp://localhost:5151',
+    'connection' : 'tcp://localhost:5252', #FIXME hardcoded, mdb 6/16/16
     'log' : "%s/yerba.log" % _path,
     'max_attempts' : 30,
     'timeout' : 1000
@@ -32,6 +32,10 @@ def main(options=None):
         request['request'] = 'health'
     elif options.cmd == 'shutdown':
         request['request'] = 'shutdown'
+    elif options.cmd == 'workflows':
+        request['request'] = 'workflows'
+    elif options.cmd == 'queues':
+        request['request'] = 'queues'        
     elif options.cmd == 'status':
         request['request'] = 'get_status'
         request['data']['id'] = options.identifier
@@ -87,19 +91,15 @@ if __name__ == '__main__':
 
     parser.add_argument('--version', action='version', version="%(prog)s 0.3.2")
 
-    subparser = parser.add_subparsers(title="commands", dest='cmd',
-            description="List of available commands:")
+    subparser = parser.add_subparsers(title="commands", dest='cmd', description="List of available commands:")
     #
     # WORKFLOW COMMANDS
     #
 
     #RESTART
-    restart = subparser.add_parser('restart', conflict_handler='resolve',
-        help="restart an existing workflow")
-    restart.add_argument('identifier',
-        help="identifier of the workflow to be cancelled")
-    restart.add_argument('--regenerate', action='store_true',
-        help="regenerates the entire workflow from scratch")
+    restart = subparser.add_parser('restart', conflict_handler='resolve', help="restart an existing workflow")
+    restart.add_argument('identifier', help="identifier of the workflow to be cancelled")
+    restart.add_argument('--regenerate', action='store_true', help="regenerates the entire workflow from scratch")
 
     #CANCEL
     cancel = subparser.add_parser('cancel', conflict_handler='resolve',
@@ -122,5 +122,11 @@ if __name__ == '__main__':
 
     # SHUTDOWN
     shutdown = subparser.add_parser('shutdown', help="cancel all workflows and quit")
+    
+    # WORKFLOWS
+    shutdown = subparser.add_parser('workflows', help="list all workflows and quit")
+    
+    # QUEUES
+    shutdown = subparser.add_parser('queues', help="list all queues and quit")
 
     main(options = parser.parse_args())
