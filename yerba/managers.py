@@ -54,6 +54,11 @@ class ServiceManager(object):
             return cls.core[key]
         else:
             return None
+    
+    # mdb added 6/16/16
+    @classmethod
+    def get_all(cls):
+        return cls.core.values();
 
     @classmethod
     def start(cls):
