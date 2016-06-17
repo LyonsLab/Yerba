@@ -102,16 +102,12 @@ if __name__ == '__main__':
     restart.add_argument('--regenerate', action='store_true', help="regenerates the entire workflow from scratch")
 
     #CANCEL
-    cancel = subparser.add_parser('cancel', conflict_handler='resolve',
-        help="cancel an existing workflow")
-    cancel.add_argument('identifier',
-        help="identifier of the workflow to be cancelled")
+    cancel = subparser.add_parser('cancel', conflict_handler='resolve', help="cancel an existing workflow")
+    cancel.add_argument('identifier', help="identifier of the workflow to be cancelled")
 
     # STATUS
-    status = subparser.add_parser('status', conflict_handler='resolve',
-        help="get the status of an existing workflow")
-    status.add_argument('identifier',
-        help="the identifier of the scheduled workflow")
+    status = subparser.add_parser('status', conflict_handler='resolve', help="get the status of an existing workflow")
+    status.add_argument('identifier', help="the identifier of the scheduled workflow")
 
     #
     # SERVER COMMANDS
