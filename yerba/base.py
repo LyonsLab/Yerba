@@ -178,7 +178,7 @@ def get_workflows(data):
         status_message = status_name(status)
         result.append((workflow_id, name, start, stop, status_message))
 
-    return { "workflows" : result }
+    return {"status" : 'OK', "workflows" : result}
 
 @route("get_status")
 def get_workflow_status(data):
@@ -191,3 +191,14 @@ def get_workflow_status(data):
         return {"status" : status_name(status), "jobs" : jobs}
     except KeyError:
         return {"status" : 'NotFound', "jobs" : {}}
+
+# mdb added 6/16/16 for JEX distribution
+@route("queues")
+def get_queues(data):
+    '''Return all available queues.'''
+    access.info("##### FETCHING QUEUES #####")
+    queues = ServiceManager.get_all();
+    result = []
+    for q in queues:
+        result.append(q.project) 
+    return {"status" : "OK", "queues": result}
