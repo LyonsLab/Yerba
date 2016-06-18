@@ -51,12 +51,12 @@ class WorkQueueService(Service):
             self.port = int(config['port'])
             self.priority = int(config['priority']) # mdb added 5/26/16
             self.log = config['log']
-            #self.password = config['password'] # mdb added 5/25/16
+            self.password = config.get('password') or None # mdb added 5/25/16
             
             # mdb added 5/25/16 for distribution
             self.name += '.' + self.project;
 
-            if config['debug']:
+            if config.get('debug'):
                 WQ.set_debug_flag('all')
         except KeyError:
             logger.exception("Invalid workqueue configuration")
@@ -71,10 +71,11 @@ class WorkQueueService(Service):
         '''
         try:
             self.queue = WQ.WorkQueue(name=self.project, catalog=True, port=-1)
+            self.queue.specify_master_mode(WQ.WORK_QUEUE_MASTER_MODE_CATALOG); # mdb added 6/17/16
             self.queue.specify_catalog_server(self.catalog_server, self.catalog_port)
             self.queue.specify_log(self.log)
-            #self.queue.specify_password_file(self.password) # mdb added 5/25/16
-            logger.info('WORKQUEUE %s: Started work queue on port %s', self.project, self.queue.port)
+            self.queue.specify_password_file(self.password) if self.password else None # mdb added 5/25/16
+            logger.info('WORKQUEUE %s: Started work queue on port %s with priority %s', self.project, self.queue.port, self.priority)
         except Exception:
             logger.exception("The work queue could not be started")
             exit(1)
@@ -90,11 +91,13 @@ class WorkQueueService(Service):
         '''
         Schedules jobs into work_queue
         '''
-        
-        if self.priority != priority: # mdb added 5/26/16
-            return;
-        
         logger.info("######### WORKQUEUE SCHEDULING ##########")
+        
+        # mdb added 5/26/16
+        if self.priority != priority: 
+            logger.info('WORKQUEUE %s: Skipping workflow due to priority mismatch %s != %s', self.project, self.priority, priority)
+            return;
+            
         for new_job in iterable:
             logger.info('WORKQUEUE %s: The workflow %s is scheduling job %s', self.project, name, new_job)
 
@@ -152,8 +155,7 @@ class WorkQueueService(Service):
 
         If a task is completed new tasks from the workflow will be scheduled.
         '''
-        task = self.queue.wait(0)
-
+        task = self.queue.wait()
         if not task:
             return
 
