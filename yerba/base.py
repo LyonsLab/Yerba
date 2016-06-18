@@ -200,5 +200,5 @@ def get_queues(data):
     queues = ServiceManager.get_all();
     result = []
     for q in queues:
-        result.append(q.project) 
+        result.append({'project': q.project, 'priority': q.priority}) 
     return {"status" : "OK", "queues": result}
