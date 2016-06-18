@@ -120,9 +120,10 @@ if __name__ == '__main__':
     shutdown = subparser.add_parser('shutdown', help="cancel all workflows and quit")
     
     # WORKFLOWS
-    shutdown = subparser.add_parser('workflows', help="list all workflows and quit")
+    workflows = subparser.add_parser('workflows', help="list all workflows and quit")
+    workflows.add_argument('--status', action='store_true', help="limit results to workflows of given status")
     
     # QUEUES
-    shutdown = subparser.add_parser('queues', help="list all queues and quit")
+    queues = subparser.add_parser('queues', help="list all queues and quit")
 
     main(options = parser.parse_args())
