@@ -126,20 +126,20 @@ class WorkQueueService(Service):
             task = WQ.Task(cmd)
 
             for input_file in new_job.inputs:
-                if isinstance(input_file, list) and input_file[1]:
+                if isinstance(input_file, list) and input_file[1]: # input directory
                     remote_input = basename(abspath(input_file[0]))
-                    task.specify_directory(str(input_file[0]), str(remote_input), WQ.WORK_QUEUE_INPUT, recursive=1)
-                else:
+                    task.specify_directory(str(input_file[0]), str(remote_input), WQ.WORK_QUEUE_INPUT, WQ.WORK_QUEUE_CACHE, recursive=1)
+                else: # input file
                     remote_input = basename(abspath(input_file))
-                    task.specify_input_file(str(input_file), str(remote_input), WQ.WORK_QUEUE_INPUT)
+                    task.specify_input_file(str(input_file), str(remote_input), WQ.WORK_QUEUE_INPUT, WQ.WORK_QUEUE_CACHE)
 
             for output_file in new_job.outputs:
-                if isinstance(output_file, list):
+                if isinstance(output_file, list): # output directory
                     remote_output = basename(abspath(output_file[0]))
-                    task.specify_directory(str(output_file[0]), str(remote_output), WQ.WORK_QUEUE_OUTPUT, recursive=1, cache=False)
-                else:
+                    task.specify_directory(str(output_file[0]), str(remote_output), WQ.WORK_QUEUE_OUTPUT, WQ.WORK_QUEUE_NOCACHE, recursive=1)
+                else: # output file
                     remote_output = basename(abspath(output_file))
-                    task.specify_file(str(output_file), str(remote_output), WQ.WORK_QUEUE_OUTPUT, cache=False)
+                    task.specify_file(str(output_file), str(remote_output), WQ.WORK_QUEUE_OUTPUT, WQ.WORK_QUEUE_NOCACHE)
 
             new_id = self.queue.submit(task)
 
