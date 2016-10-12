@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+ -*- coding: utf-8 -*-
 from __future__ import division
 
 from datetime import datetime
@@ -94,15 +94,15 @@ class WorkQueueService(Service):
         logger.info("######### WORKQUEUE SCHEDULING ##########")
         
         # mdb added 5/26/16
-        if self.priority != priority: 
-            logger.info('WORKQUEUE %s: Skipping workflow due to priority mismatch %s != %s', self.project, self.priority, priority)
-            return;
-            
         for new_job in iterable:
-            logger.info('WORKQUEUE %s: The workflow %s is scheduling job %s', self.project, name, new_job)
+            if int(new_job.priority) != int(self.priority): 
+                logger.info('WORKQUEUE %s: Skipping task due to priority mismatch %s != %s', self.project, self.priority, new_job.priority)
+                return;
+            
+            logger.info('WORKQUEUE %s: Workflow %s is scheduling task: %s', self.project, name, new_job)
 
             if not new_job.ready():
-                logger.info('WORKFLOW %s: Job %s was not scheduled waiting on inputs', name, new_job)
+                logger.info('WORKFLOW %s: Task was not scheduled waiting on inputs: %s', name, new_job)
                 continue
 
             skip = False
@@ -131,7 +131,7 @@ class WorkQueueService(Service):
                     task.specify_directory(str(input_file[0]), str(remote_input), WQ.WORK_QUEUE_INPUT, WQ.WORK_QUEUE_CACHE, recursive=1)
                 else: # input file
                     remote_input = basename(abspath(input_file))
-                    task.specify_input_file(str(input_file), str(remote_input), WQ.WORK_QUEUE_INPUT, WQ.WORK_QUEUE_CACHE)
+                    task.specify_file(str(input_file), str(remote_input), WQ.WORK_QUEUE_INPUT, WQ.WORK_QUEUE_CACHE)
 
             for output_file in new_job.outputs:
                 if isinstance(output_file, list): # output directory
@@ -155,15 +155,19 @@ class WorkQueueService(Service):
 
         If a task is completed new tasks from the workflow will be scheduled.
         '''
+        
+#         logger.info("######### WORKQUEUE UPDATING ##########")
+#         logger.info("WORKQUEUE %s: Fetched task from the work queue", self.project)
+        
         task = self.queue.wait()
         if not task:
             return
-
+        
         logger.info("######### WORKQUEUE UPDATING ##########")
-        logger.info("WORKQUEUE %s: Fetching task from the work queue", self.project)
+        logger.info("WORKQUEUE %s: Fetched task from the work queue", self.project)
 
         try:
-            logger.debug("INSPECTING TASK: %s", str(task))
+            #logger.debug("INSPECTING TASK: %s", str(task))
             logger.debug(('WORKQUEUE %s: Received task %s from work_queue with return_status %s'), self.project, task.id, task.return_status)
         except:
             logger.debug("Couldn't inspect the task")
