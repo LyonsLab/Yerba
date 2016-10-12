@@ -99,7 +99,7 @@ def log_not_run_job(log_file, job):
         log_handle.write('#' * 25 + '\n\n')
 
 class Job(object):
-    def __init__(self, cmd, script, arguments, description=''):
+    def __init__(self, cmd, script, arguments, description='', priority=0):
         self.cmd = cmd
         self.script = script
         self.args = arguments
@@ -114,25 +114,28 @@ class Job(object):
             "allow-zero-length" : True,
             "retries" : 0
         }
+        self.priority = priority; # mdb added 6/20/16 for jex-distribution
+        if self.priority == None:
+            self.priority = 0;
 
     @classmethod
     def from_object(cls, job_object):
         """
         Returns a job generated from a python object
         """
-        (cmd, script, args) = (job_object['cmd'], job_object['script'],
-                            job_object.get('args', []))
+        (cmd, script, args, priority) = (job_object['cmd'], job_object['script'],
+                            job_object.get('args', []), job_object['priority'])
 
         arg_string = _format_args(args)
 
         # Set the job_object description
         desc = job_object.get('description', '')
-        new_job = cls(cmd, script, arg_string, description=desc)
-        logger.debug("Creating job %s",  new_job.description)
+        new_job = cls(cmd, script, arg_string, description=desc, priority=priority)
+        logger.debug("Creating job '%s'",  new_job.description)
 
         # Set the job_object options
         options = job_object.get('options', {})
-        logger.info("Additional job options being set %s", options)
+        logger.info("Additional job options being set: %s", options)
         new_job.options = filter_options(options)
 
         # Add inputs
@@ -191,7 +194,6 @@ class Job(object):
         status.extend(self.info.items())
 
         return dict(status)
-
 
     def clear(self):
         for output in self.outputs:
