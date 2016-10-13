@@ -99,9 +99,8 @@ def log_not_run_job(log_file, job):
         log_handle.write('#' * 25 + '\n\n')
 
 class Job(object):
-    def __init__(self, cmd, script, arguments, description='', priority=0):
+    def __init__(self, cmd, arguments, description='', priority=0):
         self.cmd = cmd
-        self.script = script
         self.args = arguments
         self.inputs = []
         self.outputs = []
@@ -123,13 +122,13 @@ class Job(object):
         """
         Returns a job generated from a python object
         """
-        (cmd, script, priority, args) = (job_object['cmd'], job_object.get('script'), job_object.get('priority'), job_object.get('args', []))
+        (cmd, priority, args) = (job_object['cmd'], job_object.get('priority'), job_object.get('args', []))
 
         arg_string = _format_args(args)
 
         # Set the job_object description
         desc = job_object.get('description', '')
-        new_job = cls(cmd, script, arg_string, description=desc, priority=priority)
+        new_job = cls(cmd, arg_string, description=desc, priority=priority)
         logger.debug("Creating job '%s'",  new_job.description)
 
         # Set the job_object options
