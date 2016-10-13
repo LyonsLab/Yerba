@@ -9,14 +9,14 @@ from yerba import utils
 
 logger = logging.getLogger('yerba.workflow')
 
-WAITING = 'waiting'
+WAITING   = 'waiting'
 SCHEDULED = 'scheduled'
-RUNNING = 'running'
+RUNNING   = 'running'
 COMPLETED = 'completed'
-FAILED = 'failed'
+FAILED    = 'failed'
 CANCELLED = 'cancelled'
-STOPPED = 'stopped'
-SKIPPED = 'skipped'
+STOPPED   = 'stopped'
+SKIPPED   = 'skipped'
 
 READY_STATES = frozenset([WAITING, SCHEDULED])
 RUNNING_STATES = frozenset([WAITING, SCHEDULED, RUNNING])
