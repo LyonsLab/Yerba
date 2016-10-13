@@ -1,7 +1,7 @@
 Yerba
 =====
 
-CoGe's Yerba is a distributed job management framework.
+Yerba is a distributed job management framework.
 
 Third-party Dependencies
 ------------------------
@@ -64,9 +64,7 @@ Given an optional id will attempt to update an existing workflow with the workfl
 ###### Structure of a job
 __description__ - The description used to describe the job in the get status response.
 
-__cmd__ - The command that will be run by joining the cmd, script, and args into a command string.
-
-__script__ - The script that is to be used as part of the command string to run the job.
+__cmd__ - The command that will be run by joining the cmd and args into a command string.
 
 __options__ - Optional arguments that change the behavior of how the workflow will complete.
 
