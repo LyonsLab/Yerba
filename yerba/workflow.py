@@ -123,8 +123,7 @@ class Job(object):
         """
         Returns a job generated from a python object
         """
-        (cmd, script, args, priority) = (job_object['cmd'], job_object['script'],
-                            job_object.get('args', []), job_object['priority'])
+        (cmd, script, priority, args) = (job_object['cmd'], job_object.get('script'), job_object.get('priority'), job_object.get('args', []))
 
         arg_string = _format_args(args)
 
@@ -178,8 +177,7 @@ class Job(object):
 
     @info.setter
     def info(self, info):
-        logger.info("JOB (status: %s): The info field has been updated",
-                self.status)
+        logger.info("JOB (status: %s): The info field has been updated", self.status)
         self._info = info
 
     @property
@@ -187,8 +185,11 @@ class Job(object):
         #FIXME add support for errors
 
         status = [
-            ['status', self.status],
+            ['status',      self.status],
             ['description', self.description],
+            ['cmd',         self.cmd + self.args],  # mdb added 10/13/16
+            ['inputs',      self.inputs],           # mdb added 10/13/16
+            ['outputs',     self.outputs]           # mdb added 10/13/16
         ]
 
         status.extend(self.info.items())
