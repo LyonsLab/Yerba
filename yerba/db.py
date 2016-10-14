@@ -10,7 +10,7 @@ CREATE_TABLE_QUERY = '''
     (id INTEGER PRIMARY KEY AUTOINCREMENT,
      name TEXT,
      log TEXT,
-     jobs BLOB,
+     tasks BLOB,
      submitted TEXT,
      completed TEXT,
      priority INTEGER,
@@ -87,31 +87,31 @@ class WorkflowStore(object):
         else:
             return Status.NotFound
 
-    def find_workflow(self, jobs):
+    def find_workflow(self, tasks):
         """
         Finds the workflow and returns its id
         """
         query = '''
             SELECT * FROM workflows
-            WHERE jobs=?
+            WHERE tasks=?
         '''
-        jobs_json = encoder.encode(jobs)
-        cursor = self.database.execute(query, (jobs_json,))
+        tasks_json = encoder.encode(tasks)
+        cursor = self.database.execute(query, (tasks_json,))
         return cursor.fetchone()
 
-    def add_workflow(self, name=None, log=None, jobs=None,
+    def add_workflow(self, name=None, log=None, tasks=None,
                     priority=0, status=Status.Initialized):
         """
         Adds the workflow and returns its id
         """
         query = '''
-            INSERT INTO workflows(name, log, jobs, submitted, completed,
+            INSERT INTO workflows(name, log, tasks, submitted, completed,
                                 status, priority)
             VALUES (?, ?, ?, ?, ?, ?, ?)
         '''
 
-        if jobs:
-            job_json = encoder.encode(jobs)
+        if tasks:
+            job_json = encoder.encode(tasks)
         else:
             job_json = None
 
@@ -133,18 +133,18 @@ class WorkflowStore(object):
         cursor = self.database.execute(query, (workflow_id,))
         return cursor.fetchone()
 
-    def update_workflow(self, workflow_id, name=None, log=None, jobs=None,
+    def update_workflow(self, workflow_id, name=None, log=None, tasks=None,
                         priority=0):
         """
         Persists the pickled workflow into the database
         """
         query = """
             UPDATE workflows
-            SET name=?, log=?, jobs=?, priority=?
+            SET name=?, log=?, tasks=?, priority=?
             WHERE id=?
         """
-        if jobs:
-            job_json = encoder.encode(jobs)
+        if tasks:
+            job_json = encoder.encode(tasks)
         else:
             job_json = None
 
@@ -183,7 +183,7 @@ class WorkflowStore(object):
 
     def stop_workflows(self):
         """
-        Set the status of all Running jobs to stopped
+        Set the status of all Running tasks to stopped
         """
 
         query = '''

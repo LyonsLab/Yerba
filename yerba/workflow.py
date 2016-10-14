@@ -4,8 +4,8 @@ import logging
 import os
 
 from yerba import core
-from yerba import db
 from yerba import utils
+from yerba.task import Task
 
 logger = logging.getLogger('yerba.workflow')
 
@@ -18,8 +18,8 @@ CANCELLED = 'cancelled'
 STOPPED   = 'stopped'
 SKIPPED   = 'skipped'
 
-READY_STATES = frozenset([WAITING, SCHEDULED])
-RUNNING_STATES = frozenset([WAITING, SCHEDULED, RUNNING])
+READY_STATES    = frozenset([WAITING, SCHEDULED])
+RUNNING_STATES  = frozenset([WAITING, SCHEDULED, RUNNING])
 FINISHED_STATES = frozenset([STOPPED, CANCELLED, FAILED, COMPLETED, SKIPPED])
 
 def _format_args(args):
@@ -37,15 +37,15 @@ def _format_args(args):
     return argstring
 
 
-@utils.log_on_exception(OSError, "The job could not be written to the log.",
+@utils.log_on_exception(OSError, "The task could not be written to the log.",
                          logger=logger)
-@utils.log_on_exception(IOError, "The job could not be written to the log.",
+@utils.log_on_exception(IOError, "The task could not be written to the log.",
                          logger=logger)
-def log_job_info(log_file, job):
-    '''Log the results of a job'''
+def log_task_info(log_file, task):
+    '''Log the results of a task'''
     outputs = []
     msg = (
-        "Job: {cmd}\n"
+        "task: {cmd}\n"
         "Submitted at: {started}\n"
         "Completed at: {ended}\n"
         "Execution time: {elapsed} sec\n"
@@ -55,15 +55,15 @@ def log_job_info(log_file, job):
         "Command Output:\n"
         "{output}")
 
-    for item in job.outputs:
+    for item in task.outputs:
         if isinstance(item, list) and item[1]:
             outputs.append(item[0])
         else:
             outputs.append(item)
 
-    job.info['outputs'] = ', '.join(outputs)
-    description = '{0}\n'.format(job.description)
-    body = msg.format(**job.info)
+    task.info['outputs'] = ', '.join(outputs)
+    description = '{0}\n'.format(task.description)
+    body = msg.format(**task.info)
 
     with open(log_file, 'a') as log_handle:
         log_handle.write('#' * 25 + '\n')
@@ -71,234 +71,69 @@ def log_job_info(log_file, job):
         log_handle.write(body)
         log_handle.write('#' * 25 + '\n\n')
 
-@utils.log_on_exception(OSError, "The job could not be written to the log.",
+@utils.log_on_exception(OSError, "The task could not be written to the log.",
                          logger=logger)
-@utils.log_on_exception(IOError, "The job could not be written to the log.",
+@utils.log_on_exception(IOError, "The task could not be written to the log.",
                          logger=logger)
-def log_skipped_job(log_file, job):
-    '''Log a job that was skipped'''
+def log_skipped_task(log_file, task):
+    '''Log a task that was skipped'''
     with open(log_file, 'a') as log_handle:
         log_handle.write('#' * 25 + '\n')
-        log_handle.write('{0}\n'.format(job.description))
-        log_handle.write("Job: %s\n" % str(job))
+        log_handle.write('{0}\n'.format(task.description))
+        log_handle.write("task: %s\n" % str(task))
         log_handle.write("Skipped: The analysis was previously generated.\n")
         log_handle.write('#' * 25 + '\n\n')
 
-@utils.log_on_exception(OSError, "The job could not be written to the log.",
+@utils.log_on_exception(OSError, "The task could not be written to the log.",
                          logger=logger)
-@utils.log_on_exception(IOError, "The job could not be written to the log.",
+@utils.log_on_exception(IOError, "The task could not be written to the log.",
                          logger=logger)
-def log_not_run_job(log_file, job):
-    '''Log a job that could not be run'''
+def log_not_run_task(log_file, task):
+    '''Log a task that could not be run'''
 
     with open(log_file, 'a') as log_handle:
         log_handle.write('#' * 25 + '\n')
-        log_handle.write('{0}\n'.format(job.description))
-        log_handle.write("Job: %s\n" % str(job))
-        log_handle.write("The job was not run.\n")
+        log_handle.write('{0}\n'.format(task.description))
+        log_handle.write("task: %s\n" % str(task))
+        log_handle.write("The task was not run.\n")
         log_handle.write('#' * 25 + '\n\n')
 
-class Job(object):
-    def __init__(self, cmd, arguments, description='', priority=0):
-        self.cmd = cmd
-        self.args = arguments
-        self.inputs = []
-        self.outputs = []
-        self._status = SCHEDULED
-        self.description = description
-        self._info = {}
-        self._errors = []
-        self.attempts = 1
-        self._options = {
-            "allow-zero-length" : True,
-            "retries" : 0
-        }
-        self.priority = priority; # mdb added 6/20/16 for jex-distribution
-        if self.priority == None:
-            self.priority = 0;
-
-    @classmethod
-    def from_object(cls, job_object):
-        """
-        Returns a job generated from a python object
-        """
-        (cmd, priority, args) = (job_object['cmd'], job_object.get('priority'), job_object.get('args', []))
-
-        arg_string = _format_args(args)
-
-        # Set the job_object description
-        desc = job_object.get('description', '')
-        new_job = cls(cmd, arg_string, description=desc, priority=priority)
-        logger.debug("Creating job '%s'",  new_job.description)
-
-        # Set the job_object options
-        options = job_object.get('options', {})
-        logger.info("Additional job options being set: %s", options)
-        new_job.options = filter_options(options)
-
-        # Add inputs
-        inputs = job_object.get('inputs', []) or []
-        new_job.inputs.extend(sorted(inputs))
-
-        # Add outputs
-        outputs = job_object.get('outputs', []) or []
-        new_job.outputs.extend(sorted(outputs))
-
-        if 'overwrite' in job_object and int(job_object['overwrite']):
-            logger.debug(("The job will overwrite previous results:\n%s"), new_job)
-            new_job.clear()
-
-        return new_job
-
-    @property
-    def options(self):
-        return self._options
-
-    @options.setter
-    def options(self, options):
-        """
-        Updates the options to be used by the job
-        """
-        self._options = utils.ChainMap(options, self._options)
-
-    @property
-    def status(self):
-        return self._status
-
-    @status.setter
-    def status(self, value):
-        logger.info('JOB: the status has been changed to %s', value)
-        self._status = value
-
-    @property
-    def info(self):
-        return self._info
-
-    @info.setter
-    def info(self, info):
-        logger.info("JOB (status: %s): The info field has been updated", self.status)
-        self._info = info
-
-    @property
-    def state(self):
-        #FIXME add support for errors
-
-        status = [
-            ['status',      self.status],
-            ['description', self.description],
-            ['cmd',         self.cmd + self.args],  # mdb added 10/13/16
-            ['inputs',      self.inputs],           # mdb added 10/13/16
-            ['outputs',     self.outputs]           # mdb added 10/13/16
-        ]
-
-        status.extend(self.info.items())
-
-        return dict(status)
-
-    def clear(self):
-        for output in self.outputs:
-            with utils.ignored(OSError):
-                os.remove(output)
-
-    def running(self):
-        return self._status == 'running'
-
-    def completed(self):
-        '''Returns whether or not the job was completed.'''
-
-        for fp in self.outputs:
-            if isinstance(fp, list) and fp[1]:
-                val = os.path.abspath(str(fp[0]))
-
-                if not os.path.isdir(val):
-                    return False
-
-            elif self.options["allow-zero-length"]:
-                path = os.path.abspath(str(fp))
-
-                if not os.path.isfile(path):
-                    return False
-            else:
-                path = os.path.abspath(str(fp))
-                if not os.path.isfile(path) or utils.is_empty(path):
-                    return False
-
-        return True
-
-    def ready(self):
-        '''Returns that the job has its input files and is ready.'''
-        for fp in self.inputs:
-            if isinstance(fp, list) and fp[1]:
-                val = os.path.abspath(str(fp[0]))
-
-                if not os.path.isdir(val):
-                    return False
-            elif self.options["allow-zero-length"]:
-                path = os.path.abspath(str(fp))
-
-                if not os.path.isfile(path):
-                    return False
-            else:
-                path = os.path.abspath(str(fp))
-
-                if not os.path.isfile(path) or utils.is_empty(path):
-                    return False
-
-        return True
-
-    def restart(self):
-        self.attempts = self.attempts + 1
-
-    def failed(self):
-        return self.attempts > self.options['retries']
-
-    def __eq__(self, other):
-        return (sorted(other.inputs) == sorted(self.inputs) and
-                sorted(other.outputs) == sorted(self.outputs) and
-                str(other) == str(self))
-
-    def __repr__(self):
-        return ' '.join([self.cmd, self.args])
-
-    def __str__(self):
-        return repr(self)
-
-#FIXME: states for jobs should be decoupled from jobs
-#TODO: Add proper dependency management to jobs
+#FIXME: states for tasks should be decoupled from tasks
+#TODO: Add proper dependency management to tasks
 class Workflow(object):
-    def __init__(self, name, jobs, log=None, priority=0):
+    def __init__(self, name, tasks, log=None, priority=0):
         self.name = name
         self.log = log
         self.priority = priority
-        self.jobs = tuple(jobs)
-        self.available = jobs
+        self.tasks = tuple(tasks)
+        self.available = tasks
         self.running = []
         self.completed = []
         self.status = core.Status.Initialized
 
-    def update_status(self, job, info):
+    def update_status(self, task, info):
         '''Updates the status of the workflow'''
-        #: Assign the info object to the job
-        job.info = info
+        #: Assign the info object to the task
+        task.info = info
 
-        #: Remove the job from the running list
-        self.running.remove(job)
+        #: Remove the task from the running list
+        self.running.remove(task)
 
         #FIXME: add workflow change events
         #: Update the workflow log
         if self.log:
-            log_job_info(self.log, job)
+            log_task_info(self.log, task)
 
-        #: Check that job returned successfully
-        if info['returned'] != 0 or not job.completed():
-            job.status = FAILED
+        #: Check that task returned successfully
+        if info['returned'] != 0 or not task.completed():
+            task.status = FAILED
             self._failed()
-            self.completed.append(job)
+            self.completed.append(task)
             self.status = core.Status.Failed
             return self.status
 
         #: Update the status to completed
-        job.status = COMPLETED
+        task.status = COMPLETED
 
         #: Check if the workflow is already in a finished state
         if self.status in core.DONE_STATUS:
@@ -319,7 +154,7 @@ class Workflow(object):
             return self.status
 
     def next(self):
-        '''Return the next set of available jobs'''
+        '''Return the next set of available tasks'''
         available = []
         skipped = []
 
@@ -327,25 +162,25 @@ class Workflow(object):
         if self.status in core.DONE_STATUS:
             return available
 
-        for job in self.available:
-            if job.outputs and job.completed():
-                skipped.append(job)
+        for task in self.available:
+            if task.outputs and task.completed():
+                skipped.append(task)
                 continue
 
-            if job.ready() and job.status in READY_STATES:
-                self.available.remove(job)
-                self.running.append(job)
-                available.append(job)
-                job.status = RUNNING
+            if task.ready() and task.status in READY_STATES:
+                self.available.remove(task)
+                self.running.append(task)
+                available.append(task)
+                task.status = RUNNING
 
-        for job in skipped:
-            self._skip(job)
+        for task in skipped:
+            self._skip(task)
 
         #: Check if any tasks are busy
         if available or self.running:
             self.status = core.Status.Running
         elif not self.available:
-            #: Check if all jobs have been skipped
+            #: Check if all tasks have been skipped
             self.status = core.Status.Completed
         else:
             self._failed()
@@ -357,67 +192,67 @@ class Workflow(object):
         ''' Sets the state of the workflow as cancelled'''
         self.status = core.Status.Cancelled
 
-        for job in self.available + self.running:
-            if job in RUNNING_STATES:
-                job.status = CANCELLED
+        for task in self.available + self.running:
+            if task in RUNNING_STATES:
+                task.status = CANCELLED
 
     def stop(self):
         ''' Sets the state of the workflow as stopped'''
         self.status = core.Status.Stopped
 
-        for job in self.available + self.running:
-            if job in RUNNING_STATES:
-                job.status = STOPPED
+        for task in self.available + self.running:
+            if task in RUNNING_STATES:
+                task.status = STOPPED
 
     def state(self):
         """Returns the state of the workflow"""
-        return [job.state for job in self.jobs]
+        return [task.state for task in self.tasks]
 
     def _finished(self):
-        """Returns True when all jobs have been finished"""
+        """Returns True when all tasks have been finished"""
         return not self.available and not self.running
 
     def _can_proceed(self):
         """
         Returns whether the workflow can continue.
         """
-        #: Get the number of running jobs
+        #: Get the number of running tasks
         total_running = len(self.running)
 
-        #: Check if any jobs are still waiting
-        waiting = [job for job in self.available if job.status in READY_STATES]
+        #: Check if any tasks are still waiting
+        waiting = [task for task in self.available if task.status in READY_STATES]
 
-        #: Get the number of ready jobs
-        total_ready = len([job for job in waiting if job.ready()]) > 0
+        #: Get the number of ready tasks
+        total_ready = len([task for task in waiting if task.ready()]) > 0
 
-        #: Proceed if a job is running or a job is ready
+        #: Proceed if a task is running or a task is ready
         return total_ready or total_running
 
     def _failed(self):
-        '''Sets a job into the failed state'''
-        for job in self.available:
-            job.status = FAILED
+        '''Sets a task into the failed state'''
+        for task in self.available:
+            task.status = FAILED
             #FIXME: add workflow change events
             #: Update the workflow log
             if self.log:
-                log_not_run_job(self.log, job)
+                log_not_run_task(self.log, task)
 
-    def _skip(self, job):
-        '''Sets a job into a skipped state'''
-        job.status = SKIPPED
-        self.available.remove(job)
-        self.completed.append(job)
+    def _skip(self, task):
+        '''Sets a task into a skipped state'''
+        task.status = SKIPPED
+        self.available.remove(task)
+        self.completed.append(task)
 
         #: Update the workflow log
         if self.log:
-            log_skipped_job(self.log, job)
+            log_skipped_task(self.log, task)
 
     def status_message(self):
         prefix = "WORKFLOW{0}: " % self.name
-        states = sorted(job.state for job in self.available + self.completed)
+        states = sorted(task.state for task in self.available + self.completed)
 
-        #: summarize the number of jobs in each state
-        fields = [",".join([state, len(jobs)]) for state,jobs in groupby(states)]
+        #: summarize the number of tasks in each state
+        fields = [",".join([state, len(tasks)]) for state,tasks in groupby(states)]
 
         #: summary of the workflows status
         summary = " ".join(fields)
@@ -428,10 +263,10 @@ class Workflow(object):
     def from_object(cls, workflow_object):
         '''Generates a workflow from a python object.'''
         logger.info("######### Generate Workflow  ##########")
-        job_objects = workflow_object.get('jobs', [])
+        task_objects = workflow_object.get('tasks', [])
 
-        if not job_objects:
-            raise WorkflowError("The workflow does not contain any jobs.")
+        if not task_objects:
+            raise WorkflowError("The workflow does not contain any tasks.")
 
         name = workflow_object.get('name', 'unnamed')
         level = workflow_object.get('priority', 0)
@@ -441,50 +276,43 @@ class Workflow(object):
         with utils.ignored(OSError, AttributeError):
             os.makedirs(os.path.dirname(logfile))
 
-        # Verify jobs and save errors
+        # Verify tasks and save errors
         errors = []
-        for (index, job_object) in enumerate(job_objects):
-            (valid, reason) = validate_job(job_object)
+        for (index, task_object) in enumerate(task_objects):
+            (valid, reason) = validate_task(task_object)
 
             if not valid:
                 errors.append((index, reason))
 
         if errors:
-            raise WorkflowError("%s jobs where not valid." % len(errors), errors)
+            raise WorkflowError("%s tasks where not valid." % len(errors), errors)
 
-        jobs = [Job.from_object(job_object) for job_object in job_objects]
-        workflow = cls(name, jobs, log=logfile, priority=level)
+        tasks = [Task.from_object(task_object) for task_object in task_objects]
+        workflow = cls(name, tasks, log=logfile, priority=level)
         logger.info("WORKFLOW %s has been generated.", name)
         return workflow
 
-def filter_options(options):
+def validate_task(task_object):
     """
-    Returns the set of filtered options that are specified
-    """
-    return {key : value for (key, value) in options.iteritems()
-                if value is not None}
-
-def validate_job(job_object):
-    """
-    Returns if the job is valid or gives a reason why invalid.
+    Returns if the task is valid or gives a reason why invalid.
     """
 
-    cmd = job_object.get('cmd', None)
-    args = job_object.get('args', [])
-    inputs = job_object.get('inputs', []) or []
-    outputs = job_object.get('outputs', []) or []
+    cmd = task_object.get('cmd', None)
+    args = task_object.get('args', [])
+    inputs = task_object.get('inputs', []) or []
+    outputs = task_object.get('outputs', []) or []
 
     if not cmd:
         return (False, "The command name was not specified")
 
     if not isinstance(args, list):
-        return (False, "The job expected a list of arguments")
+        return (False, "The task expected a list of arguments")
 
     if not isinstance(inputs, list):
-        return (False, "The job expected a list of inputs")
+        return (False, "The task expected a list of inputs")
 
     if not isinstance(outputs, list):
-        return (False, "The job expected a list of outputs")
+        return (False, "The task expected a list of outputs")
 
     if any(item is None for item in inputs):
         return (False, "An input was invalid")
@@ -492,7 +320,7 @@ def validate_job(job_object):
     if any(fp is None for fp in outputs):
         return (False, "An output was invalid")
 
-    return (True, "The job has been validated")
+    return (True, "The task has been validated")
 
 class WorkflowError(Exception):
     """Error reported when workflow fails to be created"""

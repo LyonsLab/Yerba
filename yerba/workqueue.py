@@ -1,4 +1,4 @@
- -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 from __future__ import division
 
 from datetime import datetime
@@ -82,18 +82,22 @@ class WorkQueueService(Service):
 
     def stop(self):
         '''
-        Removes all jobs from the queue and stops the work queue.
+        Removes all tasks from the queue and stops the work queue.
         '''
         logger.info('WORKQUEUE %s: Stopping work queue on port %s', self.project, self.queue.port)
         self.queue.shutdown_workers(0)
 
     def schedule(self, iterable, name, priority=None):
         '''
-        Schedules jobs into work_queue
+        Schedules tasks into work_queue
         '''
         logger.info("######### WORKQUEUE SCHEDULING ##########")
         
         # mdb added 5/26/16
+        if self.priority != priority:
+            logger.info('WORKQUEUE %s: Skipping workflow due to priority mismatch %s != %s', self.project, self.priority, priority)
+            return;
+
         for new_job in iterable:
             if int(new_job.priority) != int(self.priority): 
                 logger.info('WORKQUEUE %s: Skipping task due to priority mismatch %s != %s', self.project, self.priority, new_job.priority)
@@ -113,7 +117,7 @@ class WorkQueueService(Service):
                     if name not in names:
                         names.append(name)
 
-                    logger.info(('WORKQUEUE %s: This job has already been assigned to task %s'), self.project, taskid)
+                    logger.info(('WORKQUEUE %s: This task has already been assigned to task %s'), self.project, taskid)
 
                     self.tasks[taskid] = (names, job)
                     skip = True
@@ -159,7 +163,7 @@ class WorkQueueService(Service):
 #         logger.info("######### WORKQUEUE UPDATING ##########")
 #         logger.info("WORKQUEUE %s: Fetched task from the work queue", self.project)
         
-        task = self.queue.wait()
+        task = self.queue.wait(0)
         if not task:
             return
         
@@ -173,7 +177,7 @@ class WorkQueueService(Service):
             logger.debug("Couldn't inspect the task")
 
         if task.id not in self.tasks:
-            logger.info(('WORKQUEUE %s: The job for id %s could not be found.'), self.project, task.id)
+            logger.info(('WORKQUEUE %s: The task for id %s could not be found.'), self.project, task.id)
             return
 
         (names, job) = self.tasks[task.id]
@@ -187,7 +191,7 @@ class WorkQueueService(Service):
 
     def cancel(self, name):
         '''
-        Removes the jobs based on there job id task id from the queue.
+        Removes tasks based on task id from the queue.
         '''
         for (taskid, item) in self.tasks.items():
             (names, job) = item

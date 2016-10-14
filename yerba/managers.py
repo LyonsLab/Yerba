@@ -182,12 +182,12 @@ class WorkflowManager(object):
         cls.store = WorkflowStore(cls.database)
 
     @classmethod
-    def create(cls, workflow=None, jobs_object=None, status=Status.Initialized):
+    def create(cls, workflow=None, tasks_object=None, status=Status.Initialized):
         '''Adds a new workflow to the database'''
 
-        if workflow and jobs_object:
+        if workflow and tasks_object:
             workflow_id = cls.store.add_workflow(
-                name=workflow.name, log=workflow.log, jobs=jobs_object,
+                name=workflow.name, log=workflow.log, tasks=tasks_object,
                 status=status, priority=workflow.priority)
         else:
             workflow_id = cls.store.add_workflow(status=status)
@@ -215,7 +215,7 @@ class WorkflowManager(object):
         if workflow_id:
             workflow_found = cls.store.get_workflow(workflow_id)
         else:
-            workflow_found = cls.store.find_workflow(data['jobs'])
+            workflow_found = cls.store.find_workflow(data['tasks'])
 
         if workflow_found:
             (workflow_id, _, _, _, _, _, _, status) = workflow_found
@@ -227,10 +227,10 @@ class WorkflowManager(object):
             if status == Status.Initialized:
                 logger.info("updating workflow id=%s", workflow_id)
                 cls.store.update_workflow(workflow_id,
-                    name=workflow.name, log=workflow.log, jobs=data['jobs'],
+                    name=workflow.name, log=workflow.log, tasks=data['tasks'],
                     priority=workflow.priority)
         else:
-            (workflow_id, _) = cls.create(workflow=workflow, jobs_object=data['jobs'])
+            (workflow_id, _) = cls.create(workflow=workflow, tasks_object=data['tasks'])
 
         cls.workflows[workflow_id] = workflow
         scheduled_status = cls.schedule(workflow_id, workflow)
@@ -241,12 +241,12 @@ class WorkflowManager(object):
     def schedule(cls, workflow_id, workflow):
         '''Schedules a workflow by its id'''
 
-        jobs = workflow.next()
+        tasks = workflow.next()
         cls.store.update_status(workflow_id, workflow.status)
 
-        #: Submit any jobs to the queue
-        if jobs:
-            cls.notifier.notify(SCHEDULE_TASK, jobs, workflow_id, priority=workflow.priority)
+        #: Submit any tasks to the queue
+        if tasks:
+            cls.notifier.notify(SCHEDULE_TASK, tasks, workflow_id, priority=workflow.priority)
             logger.info("submitted workflow id=%s", workflow_id)
 
         return workflow.status
@@ -257,14 +257,14 @@ class WorkflowManager(object):
         return cls.store.fetch(ids, status)
 
     @classmethod
-    def update(cls, workflow_id, job, info):
-        '''Updates the job with details'''
+    def update(cls, workflow_id, task, info):
+        '''Updates the task with details'''
 
         with ignored(KeyError):
             workflow = cls.workflows[workflow_id]
 
             #: Update the status of the workflow
-            workflow.update_status(job, info)
+            workflow.update_status(task, info)
 
             #: Fetch next set of tasks and update the worflow
             iterable = workflow.next()
@@ -282,13 +282,13 @@ class WorkflowManager(object):
     def status(cls, workflow_id):
         '''Gets the status of the current workflow.'''
         status = cls.store.get_status(workflow_id)
-        jobs = []
+        tasks = []
 
         with ignored(KeyError):
             workflow = cls.workflows[int(workflow_id)]
-            jobs = workflow.state()
+            tasks = workflow.state()
 
-        return (status, jobs)
+        return (status, tasks)
 
     @classmethod
     def cancel(cls, workflow_id):
@@ -314,13 +314,13 @@ class WorkflowManager(object):
         if not workflow_found:
             return Status.NotFound
 
-        (wid, name, log, jobs, _, _, priority, _) = workflow_found
+        (wid, name, log, tasks, _, _, priority, _) = workflow_found
 
         data = {
             "name": name,
             "priority": priority,
             "logfile": log,
-            "jobs": json.loads(jobs)
+            "tasks": json.loads(tasks)
         }
 
         try:
@@ -340,6 +340,6 @@ class WorkflowManager(object):
     @classmethod
     def cleanup(cls):
         """
-        Set status for all Running jobs to stopped.
+        Set status for all Running tasks to stopped.
         """
         cls.store.stop_workflows()

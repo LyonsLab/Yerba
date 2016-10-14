@@ -186,11 +186,11 @@ def get_workflow_status(data):
     access.info("##### WORKFLOW STATUS CHECK #####")
     try:
         identity = data['id']
-        (status, jobs) = WorkflowManager.status(identity)
+        (status, tasks) = WorkflowManager.status(identity)
         logger.info(status_message(identity, status))
-        return {"status" : status_name(status), "jobs" : jobs}
+        return {"status" : status_name(status), "tasks" : tasks}
     except KeyError:
-        return {"status" : 'NotFound', "jobs" : {}}
+        return {"status" : 'NotFound', "tasks" : {}}
 
 # mdb added 6/16/16 for JEX distribution
 @route("queues")
